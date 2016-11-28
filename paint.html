@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+	<title>Paint!</title>
+</head>
+<body>
+	<style>
+	canvas {
+		touch-action: none; /* Disable panning */
+	}
+	</style>
+	<canvas id="canvas" width="800" height="600" style="border: 2px solid #333"></canvas>
+	<div id="info"></div>
+	<script type='text/javascript'>
+	var COLORS = ["red", "blue", "green", "yellow", "black", "orange"];
+	var MAX_WIDTH = 10;
+	var MAX_HEIGHT = 400;
+	var canvas = document.getElementById("canvas");
+	var context = canvas.getContext("2d");
+	var pointers=[];
+	
+	context.lineJoin = "round";
+	context.lineCap = "round";
+
+	if(window.PointerEvent) {
+		console.log("is supported");
+		canvas.addEventListener("pointerdown", startPaint);
+		canvas.addEventListener("pointermove", paint);
+		canvas.addEventListener("pointerup", endPaint);
+		canvas.addEventListener("pointercancel", endPaint);
+		canvas.addEventListener("dragover", function(e){e.preventDefault();}, true);
+		canvas.addEventListener("drop", function(e){
+			e.preventDefault(); 
+			loadImage(e.dataTransfer.files[0]);
+		}, true);
+	}
+
+	function startPaint(event) {
+		//Set up a running list of points
+		console.log("startPaint");
+		pointers[event.pointerId] = [{x: event.offsetX, y: event.offsetY}];
+	}
+	
+	function endPaint(event) {
+		console.log("endPaint");
+		delete pointers[event.pointerId];
+	}
+
+	function paint(event) {
+		console.log("paint + buttons " + event.buttons + " button " + event.button);
+
+		//if(event.buttons>0 ) {
+			event.preventDefault();
+			//Add newest point
+			pointers[event.pointerId].push({x: event.offsetX, y: event.offsetY});
+			
+			//Create path
+			context.beginPath();
+			context.moveTo(pointers[event.pointerId][0].x, pointers[event.pointerId][0].y);
+			context.lineTo(pointers[event.pointerId][1].x, pointers[event.pointerId][1].y);
+			
+			//Stroke path
+			//context.lineWidth = event.pressure * MAX_WIDTH;
+			context.lineWidth = MAX_WIDTH;
+			context.strokeStyle = COLORS[event.pointerId % COLORS.length];
+			context.stroke();
+			context.closePath();
+			
+			//Shift out oldest point
+			pointers[event.pointerId].shift();
+		//}
+	}
+	function getImageInfo (image) {
+	console.log(JSON.stringify(image.src));
+		var result = "";
+		result =+ image.type + '\n' + image.name +'\n';
+		console.log(result);
+		return result;
+	}
+	
+	function loadImage (src) {
+		//	Prevent any non-image file type from being read.
+		if(!src.type.match(/image.*/)){
+			console.log("The dropped file is not an image: ", src.type);
+			return;
+		}
+		
+		//	Create our FileReader and run the results through the render function.
+		var reader = new FileReader();
+		reader.onload = function(e){
+			render(e.target.result);
+		};
+		reader.readAsDataURL(src);
+	}
+	function render(src){
+		var image = new Image();
+		image.onload = function(){
+			var canvas = document.getElementById("canvas");
+			if(image.height > MAX_HEIGHT) {
+				image.width *= MAX_HEIGHT / image.height;
+				image.height = MAX_HEIGHT;
+			}
+			var ctx = canvas.getContext("2d");
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			canvas.width = image.width;
+			canvas.height = image.height;
+			ctx.drawImage(image, 0, 0, image.width, image.height);	
+		};
+		image.src = src;
+		var info = document.getElementById('info');
+			//console.log(JSON.stringify(src));
+		info.innerText = image.type + ' ' + image.name;
+			
+}
+	</script>
+</body>
+</html>
